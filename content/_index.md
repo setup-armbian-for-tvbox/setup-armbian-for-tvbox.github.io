@@ -373,7 +373,191 @@ curl -vk machineName.tailID.ts.net
 
 ---
 
+# dockerfile-jdk21-for-armv7
 
+
+# ☕ Aplicação Java com Maven e Docker
+
+Este projeto demonstra como construir e executar uma aplicação **Java (Spring Boot)** em um container Docker utilizando a imagem [`lavender-jre`](https://ghcr.io/retrodaredevil/lavender-jre).  
+O processo é dividido em duas fases: **build** (compilação com Maven) e **runtime** (execução do JAR).
+
+---
+
+## 📦 Estrutura do Dockerfile
+
+### 1. Fase de Build (`builder`)
+- **Imagem base**: `ghcr.io/retrodaredevil/lavender-jre:21-ubuntu-noble`
+- Instala:
+  - `openjdk-21-jdk`
+  - `maven`
+- Define diretório de trabalho:
+  ```dockerfile
+  WORKDIR /app
+  ```
+- Copia o `pom.xml` para resolver dependências.
+- Copia:
+  - `src/`
+  - `.env`
+  - `logback.xml`
+- Compila o projeto:
+  ```dockerfile
+  mvn clean package -DskipTests -q
+  ```
+- Resultado: JAR gerado em `/app/target/`.
+
+---
+
+### 2. Fase de Runtime (`runtime`)
+- Usa novamente a imagem `lavender-jre`.
+- Copia o JAR gerado para `/app/app.jar`.
+- Define permissões de execução:
+  ```dockerfile
+  chmod +x app.jar
+  ```
+
+- Configura variáveis de ambiente:
+  - **Spring Boot**:
+    - `SPRING_PROFILES_ACTIVE=docker`
+    - `SPRING_DATASOURCE_URL`
+    - `SPRING_DATASOURCE_USERNAME`
+    - `SPRING_DATASOURCE_PASSWORD`
+  - **Observabilidade (OpenTelemetry)**:
+    - `OTEL_SERVICE_NAME=ms-offers-importer`
+    - `OTEL_RESOURCE_ATTRIBUTES`
+    - Endpoints para logs, métricas e traces (`http://192.168.18.135:4318/...`)
+  - **Identificação da instância**:
+    - `INSTANCE_ID=$HOSTNAME`
+
+- Exposição da porta:
+  ```dockerfile
+  EXPOSE 8082
+  ```
+
+- Configuração de JVM:
+  ```dockerfile
+  ENV JAVA_OPTS="-XX:+UseSerialGC -Xms64m -Xmx128m -XX:+UseContainerSupport -XX:MaxRAMPercentage=70 -XX:+AlwaysPreTouch -XX:-UseAdaptiveSizePolicy -XX:+DisableExplicitGC"
+  ```
+
+- Comando padrão:
+  ```dockerfile
+  CMD java $JAVA_OPTS -jar app.jar $LOGS_ENDPOINT $METRICS_ENDPOINT $SPANS_ENDPOINT
+  ```
+
+---
+
+## ▶️ Como usar
+
+### 1. Construir a imagem
+```bash
+docker build -t minha-app-java .
+```
+
+### 2. Executar o container
+```bash
+docker run -p 8082:8082 \
+  -e SPRING_DATASOURCE_URL="jdbc:postgresql://host:5432/db" \
+  -e SPRING_DATASOURCE_USERNAME="usuario" \
+  -e SPRING_DATASOURCE_PASSWORD="senha" \
+  minha-app-java
+```
+
+### 3. Acessar a aplicação
+Abra no navegador:
+```
+http://localhost:8082
+```
+
+---
+
+## 🛠️ Observabilidade
+
+Este container já está configurado para enviar:
+- **Logs** → `http://192.168.18.135:4318/v1/logs`
+- **Métricas** → `http://192.168.18.135:4318/v1/metrics`
+- **Traces** → `http://192.168.18.135:4318/v1/traces`
+
+---
+
+``ǜash
+
+# Usa a imagem oficial
+FROM ghcr.io/retrodaredevil/lavender-jre:21-ubuntu-noble AS builder
+
+RUN apt-get update
+
+RUN apt-get install -y openjdk-21-jdk
+
+RUN apt-get install -y maven
+
+# Define diretório de trabalho
+WORKDIR /app
+
+RUN java -version
+RUN mvn -version
+
+# Copia apenas o pom.xml primeiro para resolver dependências
+COPY pom.xml ./
+
+RUN ls -lah
+
+# Copia arquivos de configuração do Maven
+COPY ./src ./src
+COPY ./.env ./.env
+COPY ./logback.xml ./logback.xml
+
+# Compila e gera o JAR
+RUN mvn clean package -DskipTests -q
+
+# Lista o conteudo   # carrega variáveis do arquivo .env
+RUN ls -lah target
+
+
+FROM ghcr.io/retrodaredevil/lavender-jre:21-ubuntu-noble AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+RUN chmod +x app.jar
+
+ARG SPRING_DATASOURCE_URL
+ARG SPRING_DATASOURCE_USERNAME
+ARG SPRING_DATASOURCE_PASSWORD
+ENV SPRING_PROFILES_ACTIVE=docker
+ENV SPRING_DATASOURCE_URL=$SPRING_DATASOURCE_URL
+ENV SPRING_DATASOURCE_USERNAME=$SPRING_DATASOURCE_USERNAME
+ENV SPRING_DATASOURCE_PASSWORD=$SPRING_DATASOURCE_PASSWORD
+ENV INSTANCE_ID=$HOSTNAME
+ENV OTEL_SERVICE_NAME=ms-offers-importer
+ENV OTEL_RESOURCE_ATTRIBUTES="service.name=ms-offers-importer,service.instance.id=$(hostname)"
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.18.135:4318
+ENV OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://192.168.18.135:4318/v1/logs
+ENV OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://192.168.18.135:4318/v1/traces
+ENV OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://192.168.18.135:4318/v1/metrics
+ENV LOGS_ENDPOINT=http://192.168.18.135:4318/v1/logs
+ENV METRICS_ENDPOINT=http://192.168.18.135:4318/v1/metrics
+ENV SPANS_ENDPOINT=http://192.168.18.135:4318/v1/spans
+
+
+EXPOSE 8082
+
+# Comando padrão
+ENV JAVA_OPTS="-XX:+UseSerialGC -Xms64m -Xmx128m -XX:+UseContainerSupport -XX:MaxRAMPercentage=70 -XX:+AlwaysPreTouch -XX:-UseAdaptiveSizePolicy -XX:+DisableExplicitGC"
+CMD java $JAVA_OPTS -jar app.jar $LOGS_ENDPOINT $METRICS_ENDPOINT $SPANS_ENDPOINT
+
+```
+
+---
+
+## 📚 Referências
+
+- [OpenTelemetry](https://opentelemetry.io/)  
+- [Maven](https://maven.apache.org/)  
+- [Docker](https://docs.docker.com/)  
+- Lavender JRE Image [(ghcr.io in Bing)](https://www.bing.com/search?q="https%3A%2F%2Fghcr.io%2Fretrodaredevil%2Flavender-jre")
+```
+
+
+
+
+--- 
 # dockerfile-for-nodejs-on-armv7
 
 # 🚀 Aplicação Node.js com Docker (32 bits)
