@@ -478,7 +478,7 @@ Este container já está configurado para enviar:
 
 ---
 
-``ǜash
+```dockerfile
 
 # Usa a imagem oficial
 FROM ghcr.io/retrodaredevil/lavender-jre:21-ubuntu-noble AS builder
@@ -543,7 +543,6 @@ ENV JAVA_OPTS="-XX:+UseSerialGC -Xms64m -Xmx128m -XX:+UseContainerSupport -XX:Ma
 CMD java $JAVA_OPTS -jar app.jar $LOGS_ENDPOINT $METRICS_ENDPOINT $SPANS_ENDPOINT
 
 ```
-
 ---
 
 ## 📚 Referências
@@ -552,7 +551,7 @@ CMD java $JAVA_OPTS -jar app.jar $LOGS_ENDPOINT $METRICS_ENDPOINT $SPANS_ENDPOIN
 - [Maven](https://maven.apache.org/)  
 - [Docker](https://docs.docker.com/)  
 - Lavender JRE Image [(ghcr.io in Bing)](https://www.bing.com/search?q="https%3A%2F%2Fghcr.io%2Fretrodaredevil%2Flavender-jre")
-```
+
 
 
 
@@ -610,12 +609,12 @@ A aplicação é servida com o pacote [`serve`](https://www.npmjs.com/package/se
 ## ▶️ Como usar
 
 ### 1. Construir a imagem
-```bash
+```dockerfile
 docker build -t minha-app-node .
 ```
 
 ### 2. Executar o container
-```bash
+```dockerfile
 docker run -p 5173:5173 minha-app-node
 ```
 
@@ -645,7 +644,7 @@ http://localhost:5173
 
 ---
 
-```bash
+```dockerfile
 # Etapa 1: Build da aplicação
 # https://hub.docker.com/_/node
 # PARA 32 BITS
