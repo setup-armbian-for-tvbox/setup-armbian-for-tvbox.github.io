@@ -13,8 +13,8 @@ Inclui guia extra para executar ambiente nodejs e java via docker
 É possível seguir a documentação de instalação com outros chips (amlogic, allwinner e etc), porem é necessario efetuar o teste com imagens apropriadas do armbian.
 
 
-![lab](images/image.jpg)
-![screen](images/screen.png)
+![lab](static/images/image.jpg)
+![screen](static/images/screen.png)
 
 
 
