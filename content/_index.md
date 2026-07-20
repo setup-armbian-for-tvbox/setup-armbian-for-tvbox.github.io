@@ -373,6 +373,142 @@ curl -vk machineName.tailID.ts.net
 
 ---
 
+
+# dockerfile-for-nodejs-on-armv7
+
+# 🚀 Aplicação Node.js com Docker (32 bits)
+
+Este projeto demonstra como construir e executar uma aplicação **Node.js** em um container Docker utilizando a imagem oficial [`arm32v7/node`](https://hub.docker.com/_/node).  
+A aplicação é servida com o pacote [`serve`](https://www.npmjs.com/package/serve) na porta **5173**.
+
+---
+
+## 📦 Etapas do Dockerfile
+
+1. **Imagem base**
+   - Usa `arm32v7/node:22.21.1-bookworm` (compatível com sistemas 32 bits).
+   - Alternativa comentada: `node:trixie-slim`.
+
+2. **Diretório de trabalho**
+   ```dockerfile
+   WORKDIR /app
+   ```
+
+3. **Cópia de arquivos de configuração**
+   - `package.json`
+   - `package-lock.json`
+   - `.env`
+
+4. **Instalação de dependências**
+   - Instala pacotes do projeto com `npm install`.
+   - Limpa cache do npm.
+   - Instala globalmente o `serve`.
+
+5. **Verificação de versões**
+   - Exibe versões do Node, npm e serve.
+
+6. **Cópia do restante do código**
+   - Executa `npm run clean` e `npm run build`.
+
+7. **Exposição da porta**
+   ```dockerfile
+   EXPOSE 5173
+   ```
+
+8. **Comando padrão**
+   ```dockerfile
+   CMD ["serve", "-s", "dist", "-l", "5173"]
+   ```
+
+---
+
+
+## ▶️ Como usar
+
+### 1. Construir a imagem
+```bash
+docker build -t minha-app-node .
+```
+
+### 2. Executar o container
+```bash
+docker run -p 5173:5173 minha-app-node
+```
+
+### 3. Acessar a aplicação
+Abra no navegador:
+```
+http://localhost:5173
+```
+
+---
+
+## 🛠️ Scripts disponíveis
+
+- `npm run clean` → limpa arquivos temporários.
+- `npm run build` → gera a versão de produção da aplicação.
+
+---
+
+## 📌 Observações
+
+- Este Dockerfile foi projetado para **arquitetura ARM 32 bits**.  
+- Se estiver em ambiente **x86_64**, altere a imagem base para:
+  ```dockerfile
+  FROM node:trixie-slim
+  ```
+- O servidor `serve` é usado apenas para servir os arquivos estáticos da pasta `dist`.
+
+---
+
+```bash
+# Etapa 1: Build da aplicação
+# https://hub.docker.com/_/node
+# PARA 32 BITS
+FROM arm32v7/node:22.21.1-bookworm
+#FROM node:trixie-slim
+
+# Define diretório de trabalho
+WORKDIR /app
+
+# Copia arquivos de configuração
+COPY package.json package-lock.json .
+COPY .env .
+
+# Instala dependências
+RUN npm install && npm cache clean --force
+RUN npm install -g serve
+RUN node -v
+RUN npm -v
+RUN serve -v
+
+RUN ls -la
+
+# Copia o restante do código
+COPY . .
+RUN npm run clean
+RUN npm run build
+
+EXPOSE 5173
+
+# Porta padrão
+CMD ["serve", "-s", "dist", "-l", "5173"]
+
+```
+
+
+---
+
+## 📚 Referências
+
+- [Node.js Docker Official Images](https://hub.docker.com/_/node)  
+- [Serve - npm](https://www.npmjs.com/package/serve)  
+- [Documentação do Docker](https://docs.docker.com/)
+
+
+
+---
+
 ## 🐞 Encontrou um Bug?
 
 Se você encontrou algum erro, comportamento inesperado ou tem sugestões de melhoria, sua contribuição é muito bem-vinda!
