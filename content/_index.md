@@ -1,6 +1,6 @@
 ---
-title: "🌌 Windows Debloat "
-date: 2026-07-08
+title: "🌌 Setup Armbian for Tvboxes "
+date: 2026-07-20
 draft: false
 ---
 
